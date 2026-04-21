@@ -1,0 +1,11 @@
+{
+  "meter_id": "WTR-100023",
+  "timestamp": "2026-04-09T12:45:00Z",
+  "consumption": {
+    "total_m3": 12.34,
+    "delta_l": 150
+  },
+  "status": "ok",
+  "errors": []
+}
+
