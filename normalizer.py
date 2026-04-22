@@ -27,12 +27,12 @@ class Consumption:
 
 
 class Device:
-    ALLOWED_STATUS = {"ok", "error", "warning"}
+    norm_statuss = ["ok", "error", "warning"]
 
     def __init__(self, data: dict):
         self.meter_id = self.norm_id(data.get("meter_id", "WTR-000000"))
         self.timestamp = self.norm_time(data.get("timestamp", datetime.now()))
-        self.consumption = self.parse_consumption(data.get("consumption"))
+        self.consumption = self.norm_consumption(data.get("consumption"))
         self.status = self.norm_status(data.get("status", "error"))
         self.errors = self.norm_errors(data.get("errors"))
 
@@ -49,12 +49,12 @@ class Device:
 
     def norm_status(self, v):
         v = str(v).lower().strip()
-        return v if v in self.ALLOWED_STATUS else "error"
+        return v if v in self.norm_statuss else "error"
 
     def norm_errors(self, v):
         return v if v else []
 
-    def parse_consumption(self, v):
+    def norm_consumption(self, v):
         if v is None:
             return None
         return Consumption(
@@ -74,10 +74,7 @@ class Device:
 
     def format_time(self):
         return (
-            self.timestamp
-            .astimezone(timezone.utc)
-            .isoformat(timespec="seconds")
-            .replace("+00:00", "Z")
+            self.timestamp.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
         )
 
     def to_dict(self):
@@ -88,9 +85,6 @@ class Device:
             "status": self.status,
             "errors": self.errors,
         }
-
-    def __repr__(self):
-        return str(self.to_dict())
 
 
 
@@ -103,4 +97,4 @@ data = {
 }
 
 device = Device(data)
-print(device)
+print(device.to_dict())
