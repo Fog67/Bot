@@ -6,9 +6,7 @@ from datetime import datetime
 
 
 if __name__ == "__main__":
-    async def test():
-        async for packet in mock_reader():
-            print(Device(**packet))
+        for packet in mock_reader():
+            print(Device(packet).to_dict())
 
 
-    asyncio.run(test())

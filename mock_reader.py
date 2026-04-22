@@ -3,7 +3,7 @@ import time
 import random
 from datetime import datetime
 
-ERROR_CODES = [
+err_codes = [
     "sensor_fault", "low_battery", "tamper_detected",
     "comm_timeout", "valve_stuck", "over_pressure"
 ]
@@ -11,14 +11,26 @@ ERROR_CODES = [
 def mock_reader():
     while True:
         try:
-            with open("data.json", encoding="UTF-8") as f:
-                data = json.load(f)
-            data["timestamp"] = datetime.now().isoformat()
-            data["consumption"]["total_m3"] = round(random.uniform(5.0, 8500.0), 2)
-            data["consumption"]["delta_l"] = random.randint(0, 500)
-            data["status"] = random.choice(["ok", "error"])
-            if data["status"] != 'ok':
-                data["errors"] = random.sample(ERROR_CODES, k=random.randint(1, 2))
+            data = {
+                "meter_id": f"WTR-100023",
+                "timestamp": datetime.now().isoformat(),
+                "consumption": {
+                    "total_m3": round(random.uniform(5.0, 8500.0), 2),
+                    "delta_l": random.randint(0, 500)
+                },
+                "status": random.choice(["ok", "error"]),
+                "errors": []
+            }
+
+            if random.random() < 0.2:
+                data.pop("timestamp", None)
+            if random.random() < 0.2:
+                data.pop("consumption", None)
+            if random.random() < 0.1:
+                data.pop("status", None)
+
+            if data.get("status") == "error":
+                data["errors"] = random.sample(err_codes, k=random.randint(1, 2))
 
             yield data
 
