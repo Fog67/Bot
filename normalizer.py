@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -14,10 +15,14 @@ def round_decimal(value, places=2):
     return value.quantize(q, rounding=ROUND_HALF_UP)
 
 
+@dataclass
 class Consumption:
-    def __init__(self, total_m3=0.0, delta_l=0.0):
-        self.total_m3 = max(Decimal("0.0"), to_decimal(total_m3))
-        self.delta_l = max(Decimal("0.0"), to_decimal(delta_l))
+    total_m3: float = 0.0
+    delta_l: float = 0.0
+
+    def __post_init__(self):
+        self.total_m3 = max(Decimal("0.0"), to_decimal(self.total_m3))
+        self.delta_l = max(Decimal("0.0"), to_decimal(self.delta_l))
 
     def to_dict(self):
         return {
@@ -26,30 +31,44 @@ class Consumption:
         }
 
 
+@dataclass
 class Device:
-    norm_statuss = ["ok", "error", "warning"]
+    STATES = ["ok", "error", "warning"]
 
-    def __init__(self, data: dict):
-        self.meter_id = self.norm_id(data.get("meter_id", "WTR-000000"))
-        self.timestamp = self.norm_time(data.get("timestamp", datetime.now()))
-        self.consumption = self.norm_consumption(data.get("consumption"))
-        self.status = self.norm_status(data.get("status", "error"))
-        self.errors = self.norm_errors(data.get("errors"))
+    meter_id: str = "WTR-000000"
+    timestamp: datetime = None
+    consumption: Consumption = None
+    status: str = "error"
+    errors: list = None
 
+    def __post_init__(self):
+        if self.errors is None:
+            self.errors = []
+        self.meter_id = self.norm_id(self.meter_id)
+        self.timestamp = self.norm_time(self.timestamp)
+        self.consumption = self.norm_consumption(self.consumption)
+        self.status = self.norm_status(self.status)
+        self.errors = self.norm_errors(self.errors)
         self.validate()
-
 
     def norm_id(self, v):
         return str(v).strip().upper()
 
     def norm_time(self, v):
+        if v is None:
+            return None
         if isinstance(v, str):
-            return datetime.fromisoformat(v.replace("Z", "+00:00"))
-        return v
+            dt = datetime.fromisoformat(v.replace("Z", "+00:00"))
+            return dt.astimezone(timezone.utc).replace(tzinfo=None)
+        if isinstance(v, datetime):
+            if v.tzinfo is not None:
+                return v.astimezone(timezone.utc).replace(tzinfo=None)
+            return v
+        return None
 
     def norm_status(self, v):
         v = str(v).lower().strip()
-        return v if v in self.norm_statuss else "error"
+        return v if v in self.STATES else "error"
 
     def norm_errors(self, v):
         return v if v else []
@@ -57,11 +76,12 @@ class Device:
     def norm_consumption(self, v):
         if v is None:
             return None
-        return Consumption(
-            total_m3=v.get("total_m3", 0.0),
-            delta_l=v.get("delta_l", 0.0),
-        )
-
+        if isinstance(v, dict):
+            return Consumption(
+                total_m3=v.get("total_m3", 0.0),
+                delta_l=v.get("delta_l", 0.0),
+            )
+        return v
 
     def validate(self):
         if self.consumption is None and self.status != "error":
@@ -73,9 +93,9 @@ class Device:
             self.errors = ["Unexpected error"]
 
     def format_time(self):
-        return (
-            self.timestamp.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
-        )
+        if self.timestamp is None:
+            return None
+        return self.timestamp.replace(tzinfo=None).isoformat(timespec="seconds")
 
     def to_dict(self):
         return {
@@ -87,14 +107,30 @@ class Device:
         }
 
 
+@dataclass
+class Devices:
+    data_list: list[dict]
+    devices: list[Device] = field(init=False)
 
-data = {
-    'meter_id': 'WTR-100023',
-    'timestamp': '2026-04-10T12:39:53.411498',
-    'consumption': {'total_m3': 6309.57, 'delta_l': 46},
-    'status': "error",
-    'errors': []
-}
+    def __post_init__(self):
+        self.devices = [Device(**item) for item in self.data_list]
 
-device = Device(data)
-print(device.to_dict())
+    def to_dictlist(self):
+        return [dev.to_dict() for dev in self.devices]
+
+
+
+if __name__ == "__main__":
+    data = {
+        'meter_id': 'WTR-100023',
+        'timestamp': '2026-04-10T12:39:53.411498Z',
+        'consumption': {'total_m3': 6309.57, 'delta_l': 46},
+        'status': "error",
+        'errors': []
+    }
+
+    device = Device(**data)
+    print(device.to_dict())
+
+    devices = Devices([data, data, data])
+    print(devices.to_dictlist())
