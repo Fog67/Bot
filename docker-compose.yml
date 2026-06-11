@@ -1,0 +1,21 @@
+name: bot_test
+services:
+  mqtt-buffer-app:
+    build: .
+    container_name: mqtt_buffer_service
+    restart: unless-stopped
+    volumes:
+      - ./buffer_data:/app/data/buffer
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - BUFFER_PATH=/app/data/buffer/device_buffer.db
+      - MQTT_BROKER=broker.hivemq.com
+      - MQTT_PORT=1883
+      - MQTT_TOPIC=sensors/data
+    networks:
+      - mqtt_network
+
+networks:
+  mqtt_network:
+    driver: bridge

@@ -25,7 +25,8 @@ def mock_reader():
                     "status": random.choice(["ok", "error"]),
                     "errors": []
                 }
-
+                if random.random() <0.2:
+                    data.pop("meter_id", None)
                 if random.random() < 0.2:
                     data.pop("timestamp", None)
                 if random.random() < 0.2:

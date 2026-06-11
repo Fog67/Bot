@@ -35,11 +35,20 @@ class Consumption:
 class Device:
     STATES = ["ok", "error", "warning"]
 
-    meter_id: str = "WTR-000000"
-    timestamp: datetime = None
+    meter_id: str = None
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     consumption: Consumption = None
     status: str = "error"
     errors: list = None
+
+
+    def __new__(cls, *args, **kwargs):
+
+        meter_id = kwargs.get('meter_id', args[0] if len(args) > 0 else None)
+        if meter_id is None:
+            return None
+
+        return super().__new__(cls)
 
     def __post_init__(self):
         if self.errors is None:
@@ -98,6 +107,7 @@ class Device:
         return self.timestamp.replace(tzinfo=None).isoformat(timespec="seconds")
 
     def to_dict(self):
+
         return {
             "meter_id": self.meter_id,
             "timestamp": self.format_time(),
@@ -116,7 +126,7 @@ class Devices:
         self.devices = [Device(**item) for item in self.data_list]
 
     def to_dictlist(self):
-        return [dev.to_dict() for dev in self.devices]
+        return [dev.to_dict() for dev in self.devices if dev != None]
 
 
 
